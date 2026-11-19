@@ -250,3 +250,417 @@ Fuzzball basics
 → agent evaluation workflow
 → GPU workflow
 → infrastructure MCP
+
+Final goal
+You will build this:
+One Python agent
+   ├── connects to the Arena REST API
+   ├── discovers unknown MCP tools
+   ├── asks an LLM how to solve the challenge
+   ├── calls relevant MCP tools
+   ├── validates the result
+   ├── submits the answer
+   └── receives a score
+The starter kit provides the clients and framework. You provide the strategy, reasoning, tool policy, reliability behavior, and final package. 
+Phase 1 — Basic environment skills
+What you learn
+- Python virtual environments
+- Dependency installation
+- Environment variables
+- Running a Python application
+- Reading logs
+- Calling remote services
+What you do
+git clone https://github.com/HarshiniVenkat/Agent-Gauntlet-Starter-Kit.git
+cd Agent-Gauntlet-Starter-Kit
+
+python3.12 -m venv .venv
+source .venv/bin/activate
+
+python -m pip install -r requirements.txt
+cp .env.example .env
+Configure:
+ARENA_SERVER=https://gauntlet-practice.136.85.160.148.sslip.io
+ARENA_API_KEY=AGENT_GAUNTLET_DC
+AGENT_ID=team-yourname
+Run:
+python -m arena_clients.doctor
+Definition of done
+You can explain:
+What the virtual environment does
+What .env contains
+What the API key is used for
+What AGENT_ID identifies
+What the doctor command validates
+Phase 2 — Run the complete baseline
+What you learn
+You learn the complete lifecycle without changing code.
+python examples/python_simple/agent.py
+The agent:
+starts
+→ registers
+→ receives challenge
+→ connects to MCP
+→ calls the LLM
+→ solves challenge
+→ submits answer
+→ receives score
+Definition of done
+You see something similar to:
+Status: submitted
+Score: ...
+At this point, you have completed your first end-to-end AI application.
+Phase 3 — Understand the architecture
+The project has one Python process with three clients:
+Your Python agent
+ ├── REST client
+ ├── MCP client
+ └── LLM client
+REST client
+Used for:
+registration
+session status
+progress thoughts
+answer submission
+MCP client
+Used for:
+listing tools
+reading tool schemas
+calling tools
+LLM client
+Used for:
+reasoning
+tool selection
+answer generation
+verification
+Definition of done
+You can describe the difference between:
+REST = arena control and submission
+MCP = external tool discovery and execution
+LLM = reasoning and answer generation
+Phase 4 — Learn MCP tool discovery
+What you learn
+You learn how an agent operates in an unknown environment.
+
+The agent must ask:
+What tools exist?
+What does each tool do?
+What inputs are required?
+Which tool is relevant?
+Conceptually:
+tools = await mcp.list_tools()
+tool_defs = await mcp.list_tool_defs()
+A tool definition may look like:
+{
+  "name": "decode_payload",
+  "description": "Decode a transformed message",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "payload": {
+        "type": "string"
+      }
+    },
+    "required": ["payload"]
+  }
+}
+The starter kit requires runtime discovery because the Practice and live environments may have different tools. 
+Your contribution
+You improve the strategy so it:
+discovers tools
+→ reads descriptions
+→ checks schemas
+→ selects relevant tools
+→ avoids irrelevant calls
+Definition of done
+Your agent does not assume that a specific tool always exists.
+Phase 5 — Customize the strategy
+Your main file is:
+my_strategy.py
+You customize:
+agent identity
+system prompt
+solver prompt
+temperature
+token budget
+model preference
+tool policy
+timeout policy
+image behavior
+Start with a strict prompt:
+You are an autonomous challenge-solving agent.
+
+Read the challenge rules carefully.
+Use tools only when relevant.
+Verify important results.
+Follow the required output format exactly.
+Submit a best-effort answer before timeout.
+
+The first line must be:
+ANSWER: <final answer>
+Definition of done
+Your agent is no longer an exact copy of the starter kit and produces a clearly defined answer format.
+
+The README requires customization because an exact copy of the starter agent may be disqualified. 
+Phase 6 — Build the tool-use loop
+The intermediate agent should follow this control loop:
+1. Read challenge
+2. Discover tools
+3. Classify challenge
+4. Select relevant tool
+5. Call tool
+6. Read result
+7. Decide whether another tool is needed
+8. Verify answer
+9. Submit
+Example:
+Challenge:
+Decode this message.
+
+Available tools:
+inspect_message
+decode_payload
+image_analysis
+
+Agent decision:
+decode_payload is relevant.
+
+Tool result:
+decoded value = 4817
+
+Final answer:
+ANSWER: 4817
+Your contribution
+You implement better behavior for:
+tool selection
+duplicate-call prevention
+tool-result interpretation
+verification
+early submission
+Phase 7 — Learn model selection
+The starter agent can choose the first available model. Your intermediate agent should consider:
+text or image challenge
+model capability
+latency
+token budget
+reliability
+Example policy:
+Text challenge:
+    choose a reliable reasoning model
+
+Image challenge:
+    choose an image-capable model
+
+Near timeout:
+    choose the fastest usable model
+Model selection is part of the scored behavior. 
+Definition of done
+You can explain why your agent selected a particular model for a particular challenge.
+Phase 8 — Add reliability engineering
+This is where the project moves from demo to engineering.
+
+Your agent must handle:
+invalid tool arguments
+tool failures
+slow responses
+duplicate calls
+empty answers
+strict output formats
+low remaining time
+Your timeout policy should be:
+If there is plenty of time:
+    explore and verify
+
+If time is limited:
+    stop exploring and prepare an answer
+
+If near timeout:
+    submit the best valid answer
+Definition of done
+Your agent does not crash or wait forever when a tool or model behaves unexpectedly.
+Phase 9 — Evaluate scientifically
+Create an experiment log:
+Version	Change	Score	Latency	Failure
+v1	Baseline			
+v2	Improved prompt			
+v3	Tool filtering			
+v4	Timeout fallback			
+
+
+Change one thing at a time.
+
+Measure:
+score
+accepted/rejected
+latency
+tools used
+tokens
+timeouts
+failure reason
+Definition of done
+You can answer:
+What change improved the agent?
+What failure happens most often?
+Which model is fastest?
+Which model is most reliable?
+How does the agent behave near timeout?
+Phase 10 — Test text and image challenges
+The README describes text challenges such as logic, reasoning, retrieval, and structured output, along with image editing and image generation challenges. 
+Text path
+Test:
+logic
+decoding
+retrieval
+structured answers
+exact formatting
+Image path
+Test:
+image-capable model selection
+image tool arguments
+standard resolution
+image result handling
+timeout behavior
+Definition of done
+The agent can identify whether the challenge is text or image-related and select an appropriate strategy.
+Phase 11 — Package the agent
+When the behavior is stable:
+python -m arena_clients.doctor
+
+python -m arena_clients.package \
+  --agent-id team-yourname \
+  --agent-name "Your Team"
+
+python -m arena_clients.package \
+  --check dist/gauntlet-submission
+The final package contains:
+submission.json
+requirements.lock
+arena_clients/
+base_strategy.py
+model_selector.py
+my_strategy.py
+agent entrypoint
+The public GitHub submission repository contains:
+team-yourname-submission.tar.gz
+team-yourname-submission.tar.gz.sha256
+The packager and submission rules are documented in the repository. 
+Phase 12 — Optional Fuzzball learning
+Only after the competition agent works.
+
+Use Fuzzball to learn:
+container execution
+workflow orchestration
+CPU/GPU allocation
+job monitoring
+artifact storage
+AI infrastructure through MCP
+Your first Fuzzball project should be:
+Run the Gauntlet agent in a container,
+capture its score and latency,
+and store the results as an artifact.
+That gives you a second portfolio story:
+I built an autonomous MCP agent and ran repeatable evaluations
+through an AI infrastructure workflow platform.
+What you will be able to say at the end
+As a basic learner:
+I can run a Python AI agent, connect it to an LLM, discover MCP tools, call external capabilities, submit an answer, and read the result.
+
+As an intermediate learner:
+I can design an autonomous agent loop, dynamically discover unknown tools, select models based on challenge type, handle tool failures and timeouts, measure performance, and package the agent reproducibly for deployment.
+
+That is the complete learning progression:
+Run
+→ Understand
+→ Customize
+→ Discover
+→ Reason
+→ Use tools
+→ Recover from failures
+→ Evaluate
+→ Package
+→ Submit
+
+The diagram shows the same program connecting to different services for different purposes:
+                 ┌──────────────────────┐
+                 │ Your Python agent    │
+                 │ one running process  │
+                 └──────┬───────┬───────┘
+                        │       │
+          REST API ─────┘       └──── MCP server
+       session/status/submit       discover/call tools
+The Python agent has multiple clients inside it:
+Your Python agent
+ ├── REST client
+ ├── MCP client
+ └── LLM client
+What happens in sequence
+1. REST call: register
+Python agent → Arena REST API
+Purpose:
+“Create my session and give me a challenge.”
+2. MCP call: discover tools
+Python agent → MCP server
+Purpose:
+“What tools are available?”
+3. LLM call: reason
+Python agent → LLM proxy
+Purpose:
+“Here is the challenge and the available tools. What should I do?”
+4. MCP call: execute a selected tool
+Python agent → MCP server
+Purpose:
+“Run this specific tool with these arguments.”
+5. LLM call: interpret the result
+Python agent → LLM proxy
+Purpose:
+“Here is the tool result. What is the answer?”
+6. REST call: submit answer
+Python agent → Arena REST API
+Purpose:
+“Submit my final answer and give me the score.”
+So the same Python process may communicate several times, but each call has a different purpose.
+Complete sequence
+Your Python agent
+      │
+      ├── REST: register
+      │
+      ├── MCP: list tools
+      │
+      ├── LLM: decide which tool to use
+      │
+      ├── MCP: execute selected tool
+      │
+      ├── LLM: interpret tool result
+      │
+      └── REST: submit answer
+If the challenge requires multiple tools, the loop may repeat:
+MCP: call tool 1
+LLM: interpret result
+
+MCP: call tool 2
+LLM: interpret result
+
+MCP: call tool 3
+LLM: produce final answer
+But it is still one Python agent.
+
+A more accurate architecture is:
+┌─────────────────────────────────────────────┐
+│ One Python agent process                    │
+│                                             │
+│  REST client ───────► Arena REST API        │
+│  MCP client ────────► MCP server            │
+│  LLM client ────────► LLM proxy             │
+│                                             │
+│  Strategy decides when and why to call them │
+└─────────────────────────────────────────────┘
+Think of it like one backend service calling several dependencies:
+One Lambda function
+ ├── calls API Gateway service
+ ├── calls database
+ └── calls another external API
+You would still say “the Lambda calls multiple services,” not that there are multiple Lambdas.
+
+Here, your Python agent is the coordinator. It calls the Arena REST API, MCP server, and LLM proxy as needed.
+
+
